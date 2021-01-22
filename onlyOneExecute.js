@@ -6,13 +6,13 @@ const smartReplace = require("./smartReplace");
 async function changeFiele() {
     //let response = await axios.get(process.env.SYNCURL);
     var request = require('request');
-       async request(process.env.SYNCURL, function (error, response, body) {
+        request(process.env.SYNCURL, function (error, response, body) {
        //console.log("获取到body:"+response.body)
        //eval(response.body)
        //eval(response.body)
        let content = response.body;
-        content = await smartReplace.inject(content);
-        await fs.writeFileSync("./executeOnce.js", content, "utf8");
+        content =  smartReplace.inject(content);
+        fs.writeFileSync("./executeOnce.js", content, "utf8");
         console.log("替换变量完毕");
       })
     
