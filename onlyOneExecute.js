@@ -6,7 +6,7 @@ const smartReplace = require("./smartReplace");
 async function changeFiele() {
     //let response = await axios.get(process.env.SYNCURL);
     var request = require('request');
-       request(process.env.SYNCURL, function (error, response, body) {
+       async request(process.env.SYNCURL, function (error, response, body) {
        //console.log("获取到body:"+response.body)
        //eval(response.body)
        //eval(response.body)
