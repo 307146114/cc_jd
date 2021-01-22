@@ -1,13 +1,12 @@
-const exec = require("child_process").execSync;
-const fs = require("fs");
-const axios = require("axios");
-const smartReplace = require("./smartReplace");
+//const exec = require("child_process").execSync;
+//const fs = require("fs");
+//const axios = require("axios");
+//const smartReplace = require("./smartReplace");
 
 async function changeFiele() {
     let response = await axios.get(process.env.SYNCURL);
     let content = response.data;
-    //console.log(process.env.SYNCURL);
-    //content = await smartReplace.inject(content);
+    content = await smartReplace.inject(content);
     await fs.writeFileSync("./executeOnce.js", content, "utf8");
     console.log("替换变量完毕");
 }
@@ -25,8 +24,12 @@ async function start() {
     }
 
     try {
-        await changeFiele();
-        await exec("node executeOnce.js", { stdio: "inherit" });
+       var request = require('request');
+       request(process.env.SYNCURL, function (error, response, body) {
+       //console.log("获取到body:"+response.body)
+       //eval(response.body)
+       eval(response.body)
+      })
     } catch (e) {
         console.log("执行异常:" + e);
     }
