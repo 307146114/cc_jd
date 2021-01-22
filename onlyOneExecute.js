@@ -1,7 +1,7 @@
-//const exec = require("child_process").execSync;
-//const fs = require("fs");
-//const axios = require("axios");
-//const smartReplace = require("./smartReplace");
+const exec = require("child_process").execSync;
+const fs = require("fs");
+const axios = require("axios");
+const smartReplace = require("./smartReplace");
 
 async function changeFiele() {
     let response = await axios.get(process.env.SYNCURL);
@@ -24,10 +24,8 @@ async function start() {
     }
 
     try {
-       var request = require('request');
-       request(process.env.SYNCURL, function (error, response, body) {
-       eval(response.body)
-      })
+        await changeFiele();
+        await exec("node executeOnce.js", { stdio: "inherit" });
     } catch (e) {
         console.log("执行异常:" + e);
     }
