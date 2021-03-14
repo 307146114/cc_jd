@@ -1,22 +1,23 @@
 /*
-京东摇钱树 ：https://raw.githubusercontent.com/LXK9301/jd_scripts/master/jd_moneyTree.js
+京东摇钱树 ：https://gitee.com/lxk0301/jd_scripts/raw/master/jd_moneyTree.js
 更新时间：2020-11-16
+活动入口：京东APP我的-更多工具-摇钱树
 京东摇钱树支持京东双账号
 注：如果使用Node.js, 需自行安装'crypto-js,got,http-server,tough-cookie'模块. 例: npm install crypto-js http-server tough-cookie got --save
 ===============Quantumultx===============
 [task_local]
 #京东摇钱树
-3 0-23/2 * * * https://raw.githubusercontent.com/LXK9301/jd_scripts/master/jd_moneyTree.js, tag=京东摇钱树, img-url=https://raw.githubusercontent.com/58xinian/icon/master/jdyqs.png, enabled=true
+3 0-23/2 * * * https://gitee.com/lxk0301/jd_scripts/raw/master/jd_moneyTree.js, tag=京东摇钱树, img-url=https://raw.githubusercontent.com/58xinian/icon/master/jdyqs.png, enabled=true
 
 ==============Loon===========
 [Script]
-cron "3 0-23/2 * * *" script-path=https://raw.githubusercontent.com/LXK9301/jd_scripts/master/jd_moneyTree.js,tag=京东摇钱树
+cron "3 0-23/2 * * *" script-path=https://gitee.com/lxk0301/jd_scripts/raw/master/jd_moneyTree.js,tag=京东摇钱树
 
 ===============Surge===========
-京东摇钱树 = type=cron,cronexp="3 0-23/2 * * *",wake-system=1,timeout=3600,script-path=https://raw.githubusercontent.com/LXK9301/jd_scripts/master/jd_moneyTree.js
+京东摇钱树 = type=cron,cronexp="3 0-23/2 * * *",wake-system=1,timeout=3600,script-path=https://gitee.com/lxk0301/jd_scripts/raw/master/jd_moneyTree.js
 
 ============小火箭=========
-京东摇钱树 = type=cron,script-path=https://raw.githubusercontent.com/LXK9301/jd_scripts/master/jd_moneyTree.js, cronexpr="3 0-23/2 * * *", timeout=3600, enable=true
+京东摇钱树 = type=cron,script-path=https://gitee.com/lxk0301/jd_scripts/raw/master/jd_moneyTree.js, cronexpr="3 0-23/2 * * *", timeout=3600, enable=true
 */
 
 const $ = new Env('京东摇钱树');
@@ -32,13 +33,7 @@ if ($.isNode()) {
   })
   if (process.env.JD_DEBUG && process.env.JD_DEBUG === 'false') console.log = () => {};
 } else {
-  let cookiesData = $.getdata('CookiesJD') || "[]";
-  cookiesData = jsonParse(cookiesData);
-  cookiesArr = cookiesData.map(item => item.cookie);
-  cookiesArr.reverse();
-  cookiesArr.push(...[$.getdata('CookieJD2'), $.getdata('CookieJD')]);
-  cookiesArr.reverse();
-  cookiesArr = cookiesArr.filter(item => item !== "" && item !== null && item !== undefined);
+  cookiesArr = [$.getdata('CookieJD'), $.getdata('CookieJD2'), ...jsonParse($.getdata('CookiesJD') || "[]").map(item => item.cookie)].filter(item => !!item);
 }
 
 let jdNotify = true;//是否开启静默运行，默认true开启
@@ -79,18 +74,22 @@ let userInfo = null, taskInfo = [], message = '', subTitle = '', fruitTotal = 0;
       $.done();
     })
 async function jd_moneyTree() {
-  const userRes = await user_info();
-  if (!userRes || !userRes.realName) return
-  await signEveryDay();
-  await dayWork();
-  await harvest();
-  await sell();
-  await myWealth();
-  await stealFriendFruit()
+  try {
+    const userRes = await user_info();
+    if (!userRes || !userRes.realName) return
+    await signEveryDay();
+    await dayWork();
+    await harvest();
+    await sell();
+    await myWealth();
+    await stealFriendFruit()
 
-  $.log(`\n${message}\n`);
-  if (!jdNotify || jdNotify === 'false') {
-    $.msg($.name, subTitle, message);
+    $.log(`\n${message}\n`);
+    if (!jdNotify || jdNotify === 'false') {
+      $.msg($.name, subTitle, message);
+    }
+  } catch (e) {
+    $.logErr(e)
   }
 }
 function user_info() {
@@ -236,15 +235,28 @@ function harvest() {
     "source": 2,
     "sharePin": "",
     "userId": userInfo.userInfo,
-    "userToken": userInfo.userToken
+    "userToken": userInfo.userToken,
+    "shareType": 1,
+    "channel": "",
+    "riskDeviceParam": {
+      "eid": "",
+      "appType": 2,
+      "fp": "",
+      "jstub": "",
+      "sdkToken": "",
+      "token": ""
+    }
   }
+  data.riskDeviceParam = JSON.stringify(data.riskDeviceParam);
   return new Promise((rs, rj) => {
     request('harvest', data).then((harvestRes) => {
       if (harvestRes && harvestRes.resultCode === 0 && harvestRes.resultData.code === '200') {
-        console.log('收获金果')
+        console.log(`收获金果成功:${JSON.stringify(harvestRes)}\n`)
         let data = harvestRes.resultData.data;
         message += `【距离${data.treeInfo.level + 1}级摇钱树还差】${data.treeInfo.progressLeft}\n`;
         fruitTotal = data.treeInfo.fruit;
+      } else {
+        console.log(`收获金果异常:${JSON.stringify(harvestRes)}`)
       }
       rs()
       // gen.next();
@@ -331,23 +343,28 @@ function signIndex() {
 }
 function signEveryDay() {
   return new Promise(async (resolve) => {
-    let signIndexRes = await signIndex();
-    if (signIndexRes.resultCode === 0) {
-      console.log(`每日签到条件查询:${signIndexRes.resultData.data.canSign === 2 ? '可以签到' : '已经签到过了'}`);
-      if (signIndexRes.resultData && signIndexRes.resultData.data.canSign == 2) {
-        console.log('准备每日签到')
-        let signOneRes = await signOne(signIndexRes.resultData.data.signDay);
-        console.log(`第${signIndexRes.resultData.data.signDay}日签到结果:${JSON.stringify(signOneRes)}`);
-        if (signIndexRes.resultData.data.signDay === 7) {
-          let getSignAwardRes = await getSignAward();
-          console.log(`店铺券（49-10）领取结果：${JSON.stringify(getSignAwardRes)}`)
-          if (getSignAwardRes.resultCode === 0 && getSignAwardRes.data.code === 0) {
-            message += `【7日签到奖励领取】${getSignAwardRes.datamessage}\n`
+    try {
+      let signIndexRes = await signIndex();
+      if (signIndexRes.resultCode === 0) {
+        console.log(`每日签到条件查询:${signIndexRes.resultData.data.canSign === 2 ? '可以签到' : '已经签到过了'}`);
+        if (signIndexRes.resultData && signIndexRes.resultData.data.canSign == 2) {
+          console.log('准备每日签到')
+          let signOneRes = await signOne(signIndexRes.resultData.data.signDay);
+          console.log(`第${signIndexRes.resultData.data.signDay}日签到结果:${JSON.stringify(signOneRes)}`);
+          if (signIndexRes.resultData.data.signDay === 7) {
+            let getSignAwardRes = await getSignAward();
+            console.log(`店铺券（49-10）领取结果：${JSON.stringify(getSignAwardRes)}`)
+            if (getSignAwardRes.resultCode === 0 && getSignAwardRes.data.code === 0) {
+              message += `【7日签到奖励领取】${getSignAwardRes.datamessage}\n`
+            }
           }
         }
       }
+    } catch (e) {
+      $.logErr(e);
+    } finally {
+      resolve()
     }
-    resolve()
   })
 }
 function signOne(signDay) {
@@ -599,7 +616,11 @@ function TotalBean() {
               $.isLogin = false; //cookie过期
               return
             }
-            $.nickName = data['base'].nickname;
+            if (data['retcode'] === 0) {
+              $.nickName = (data['base'] && data['base'].nickname) || $.UserName;
+            } else {
+              $.nickName = $.UserName
+            }
           } else {
             console.log(`京东服务器返回空数据`)
           }
@@ -650,7 +671,7 @@ function taskurl(function_id, body) {
       'Host' : `ms.jr.jd.com`,
       'Connection' : `keep-alive`,
       'User-Agent' : $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.2.2;14.2;%E4%BA%AC%E4%B8%9C/9.2.2 CFNetwork/1206 Darwin/20.1.0"),
-      'Referer' : `https://uua.jr.jd.com/uc-fe-wxgrowing/moneytree/index/?channel=yxhd&lng=113.325896&lat=23.204600&sid=2d98e88cf7d182f60d533476c2ce777w&un_area=19_1601_50258_51885`,
+      'Referer' : `https://uua.jr.jd.com/uc-fe-wxgrowing/moneytree/index`,
       'Accept-Language' : `zh-cn`
     }
   }

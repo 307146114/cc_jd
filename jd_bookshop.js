@@ -6,17 +6,17 @@
 ============Quantumultx===============
 [task_local]
 #口袋书店
-1 8,12,18 * * * https://raw.githubusercontent.com/LXK9301/jd_scripts/master/jd_bookshop.js, tag=口袋书店, img-url=https://raw.githubusercontent.com/Orz-3/task/master/jd.png, enabled=true
+1 8,12,18 * * * https://gitee.com/lxk0301/jd_scripts/raw/master/jd_bookshop.js, tag=口袋书店, img-url=https://raw.githubusercontent.com/Orz-3/mini/master/Color/jd.png, enabled=true
 
 ================Loon==============
 [Script]
-cron "1 8,12,18 * * *" script-path=https://raw.githubusercontent.com/LXK9301/jd_scripts/master/jd_bookshop.js,tag=口袋书店
+cron "1 8,12,18 * * *" script-path=https://gitee.com/lxk0301/jd_scripts/raw/master/jd_bookshop.js,tag=口袋书店
 
 ===============Surge=================
-口袋书店 = type=cron,cronexp="1 8,12,18 * * *",wake-system=1,timeout=3600,script-path=https://raw.githubusercontent.com/LXK9301/jd_scripts/master/jd_bookshop.js
+口袋书店 = type=cron,cronexp="1 8,12,18 * * *",wake-system=1,timeout=3600,script-path=https://gitee.com/lxk0301/jd_scripts/raw/master/jd_bookshop.js
 
 ============小火箭=========
-口袋书店 = type=cron,script-path=https://raw.githubusercontent.com/LXK9301/jd_scripts/master/jd_bookshop.js, cronexpr="1 8,12,18* * *", timeout=3600, enable=true
+口袋书店 = type=cron,script-path=https://gitee.com/lxk0301/jd_scripts/raw/master/jd_bookshop.js, cronexpr="1 8,12,18* * *", timeout=3600, enable=true
  */
 const $ = new Env('口袋书店');
 const notify = $.isNode() ? require('./sendNotify') : '';
@@ -41,13 +41,7 @@ if ($.isNode()) {
   if (process.env.JD_DEBUG && process.env.JD_DEBUG === 'false') console.log = () => {
   };
 } else {
-  let cookiesData = $.getdata('CookiesJD') || "[]";
-  cookiesData = jsonParse(cookiesData);
-  cookiesArr = cookiesData.map(item => item.cookie);
-  cookiesArr.reverse();
-  cookiesArr.push(...[$.getdata('CookieJD2'), $.getdata('CookieJD')]);
-  cookiesArr.reverse();
-  cookiesArr = cookiesArr.filter(item => item !== "" && item !== null && item !== undefined);
+  cookiesArr = [$.getdata('CookieJD'), $.getdata('CookieJD2'), ...jsonParse($.getdata('CookiesJD') || "[]").map(item => item.cookie)].filter(item => !!item);
 }
 
 !(async () => {
@@ -71,8 +65,6 @@ if ($.isNode()) {
         $.msg($.name, `【提示】cookie已失效`, `京东账号${$.index} ${$.nickName || $.UserName}\n请重新登录获取\nhttps://bean.m.jd.com/`, {"open-url": "https://bean.m.jd.com/"});
         if ($.isNode()) {
           await notify.sendNotify(`${$.name}cookie已失效 - ${$.UserName}`, `京东账号${$.index} ${$.UserName}\n请重新登录获取cookie`);
-        } else {
-          $.setdata('', `CookieJD${i ? i + 1 : ""}`);//cookie失效，故清空cookie。$.setdata('', `CookieJD${i ? i + 1 : "" }`);//cookie失效，故清空cookie。
         }
         continue
       }
@@ -131,7 +123,6 @@ function getIsvToken() {
     $.post(jdUrl('genToken', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -155,7 +146,6 @@ function getIsvToken2() {
     $.post(jdUrl('isvObfuscator', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -178,7 +168,6 @@ function getActCk() {
     $.get(taskUrl("dingzhi/book/develop/activity", `activityId=${ACT_ID}`), (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if($.isNode())
@@ -206,7 +195,6 @@ function getActInfo() {
     $.post(taskPostUrl('dz/common/getSimpleActInfoVo', `activityId=${ACT_ID}`), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -232,7 +220,6 @@ function getToken() {
     $.post(taskPostUrl('customer/getMyPing', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -256,7 +243,6 @@ function getUserInfo() {
     $.post(taskPostUrl('wxActionCommon/getUserInfo', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -285,10 +271,9 @@ function getActContent(info = false, shareUuid = '') {
     $.post(taskPostUrl('dingzhi/book/develop/activityContent', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
-          if (safeGet(data)) {
+          if (data && safeGet(data)) {
             data = JSON.parse(data);
             if (data.data) {
               $.userInfo = data.data
@@ -298,7 +283,8 @@ function getActContent(info = false, shareUuid = '') {
                 return
               }
               $.actorUuid = $.userInfo.actorUuid
-              if(!info) console.log(`您的好友助力码为${$.actorUuid}`)
+              // if(!info) console.log(`您的好友助力码为${$.actorUuid}`)
+              if(!info) console.log(`\n【京东账号${$.index}（${$.nickName || $.UserName}）的${$.name}好友互助码】${$.actorUuid}\n`);
               $.gold = $.userInfo.bookStore.hasStoreGold
               if (!info) {
                 const tasks = data.data.settingVo
@@ -351,7 +337,6 @@ function doHelpList(taskType, value) {
     $.post(taskPostUrl('dingzhi/taskact/common/getDayShareRecord', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -375,7 +360,6 @@ function doTask(taskType, value) {
     $.post(taskPostUrl('dingzhi/book/develop/saveTask', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -405,10 +389,9 @@ function draw() {
     $.post(taskPostUrl('dingzhi/book/develop/startDraw', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
-          if (safeGet(data)) {
+          if (data && safeGet(data)) {
             data = JSON.parse(data);
             if (data.result && data.data) {
               if (data.data.name) {
@@ -437,7 +420,6 @@ function getAllBook() {
     $.post(taskPostUrl('dingzhi/book/develop/getAllBook', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -469,7 +451,6 @@ function buyBook(bookUuid, num) {
     $.post(taskPostUrl('dingzhi/book/develop/buyBook', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -494,7 +475,6 @@ function getMyBook() {
     $.post(taskPostUrl('dingzhi/book/develop/getMyBook', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -524,7 +504,6 @@ function upBook(bookUuid) {
     $.post(taskPostUrl('dingzhi/book/develop/upBook', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -551,7 +530,6 @@ function chargeGold() {
     $.post(taskPostUrl('dingzhi/book/develop/chargeGold', body), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${err},${jsonParse(resp.body)['message']}`)
           console.log(`${$.name} API请求失败，请检查网路重试`)
         } else {
           if (safeGet(data)) {
@@ -656,7 +634,11 @@ function TotalBean() {
               $.isLogin = false; //cookie过期
               return
             }
-            $.nickName = data['base'].nickname;
+            if (data['retcode'] === 0) {
+              $.nickName = (data['base'] && data['base'].nickname) || $.UserName;
+            } else {
+              $.nickName = $.UserName
+            }
           } else {
             console.log(`京东服务器返回空数据`)
           }
