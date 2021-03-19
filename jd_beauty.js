@@ -513,7 +513,7 @@ function getToken() {
           if (safeGet(data)) {
             data = JSON.parse(data);
             $.token = data.access_token
-            console.log($.token)
+            console.log("京东账号token:${$.token}")
           }
         }
       } catch (e) {
