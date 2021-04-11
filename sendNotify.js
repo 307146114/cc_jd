@@ -2,10 +2,19 @@
  * @Author: lxk0301 https://gitee.com/lxk0301
  * @Date: 2020-08-19 16:12:40 
  * @Last Modified by: lxk0301
- * @Last Modified time: 2021-3-12 11:52:54
+ * @Last Modified time: 2021-4-3 16:00:54
+ */
+/**
+ * sendNotify 推送通知功能
+ * @param text 通知头
+ * @param desp 通知体
+ * @param params 某些推送通知方式点击弹窗可跳转, 例：{ url: 'https://abc.com' }
+ * @param author 作者仓库等信息  例：`本脚本免费使用 By：https://gitee.com/lxk0301/jd_docker`
+ * @returns {Promise<unknown>}
  */
 const querystring = require("querystring");
 const $ = new Env();
+const timeout = 15000;//超时时间(单位毫秒)
 // =======================================微信server酱通知设置区域===========================================
 //此处填你申请的SCKEY.
 //(环境变量名 PUSH_KEY)
@@ -19,13 +28,17 @@ let BARK_SOUND = '';
 
 
 // =======================================telegram机器人通知设置区域===========================================
-//此处填你telegram bot 的Token，例如：1077xxx4424:AAFjv0FcqxxxxxxgEMGfi22B4yh15R5uw
+//此处填你telegram bot 的Token，telegram机器人通知推送必填项.例如：1077xxx4424:AAFjv0FcqxxxxxxgEMGfi22B4yh15R5uw
 //(环境变量名 TG_BOT_TOKEN)
 let TG_BOT_TOKEN = '';
-//此处填你接收通知消息的telegram用户的id，例如：129xxx206
+//此处填你接收通知消息的telegram用户的id，telegram机器人通知推送必填项.例如：129xxx206
 //(环境变量名 TG_USER_ID)
 let TG_USER_ID = '';
-//Telegram api自建的反向代理地址(不懂可忽略),默认tg官方api(环境变量名:TG_API_HOST)
+//tg推送HTTP代理设置(不懂可忽略,telegram机器人通知推送功能中非必填)
+let TG_PROXY_HOST = '';//例如:127.0.0.1(环境变量名:TG_PROXY_HOST)
+let TG_PROXY_PORT = '';//例如:1080(环境变量名:TG_PROXY_PORT)
+let TG_PROXY_AUTH = '';//tg代理配置认证参数
+//Telegram api自建的反向代理地址(不懂可忽略,telegram机器人通知推送功能中非必填),默认tg官方api(环境变量名:TG_API_HOST)
 let TG_API_HOST = 'api.telegram.org'
 // =======================================钉钉机器人通知设置区域===========================================
 //此处填你钉钉 bot 的webhook，例如：5a544165465465645d0f31dca676e7bd07415asdasd
@@ -98,6 +111,9 @@ if (process.env.TG_BOT_TOKEN) {
 if (process.env.TG_USER_ID) {
   TG_USER_ID = process.env.TG_USER_ID;
 }
+if (process.env.TG_PROXY_AUTH) TG_PROXY_AUTH = process.env.TG_PROXY_AUTH;
+if (process.env.TG_PROXY_HOST) TG_PROXY_HOST = process.env.TG_PROXY_HOST;
+if (process.env.TG_PROXY_PORT) TG_PROXY_PORT = process.env.TG_PROXY_PORT;
 if (process.env.TG_API_HOST) TG_API_HOST = process.env.TG_API_HOST;
 
 if (process.env.DD_BOT_TOKEN) {
@@ -127,10 +143,17 @@ if (process.env.PUSH_PLUS_USER) {
 }
 //==========================云端环境变量的判断与接收=========================
 
-
-async function sendNotify(text, desp, params = {}) {
+/**
+ * sendNotify 推送通知功能
+ * @param text 通知头
+ * @param desp 通知体
+ * @param params 某些推送通知方式点击弹窗可跳转, 例：{ url: 'https://abc.com' }
+ * @param author 作者仓库等信息  例：`本脚本免费使用 By：https://gitee.com/lxk0301/jd_docker`
+ * @returns {Promise<unknown>}
+ */
+async function sendNotify(text, desp, params = {}, author = '\n\n本脚本免费使用 By：https://gitee.com/lxk0301/jd_docker') {
   //提供6种通知
-  desp += `\n\n本脚本开源免费使用 By：https://gitee.com/lxk0301/jd_docker`;
+  desp += author;//增加作者信息，防止被贩卖等
   await Promise.all([
     serverNotify(text, desp),//微信server酱
     pushPlusNotify(text, desp)//pushplus(推送加)
@@ -148,7 +171,7 @@ async function sendNotify(text, desp, params = {}) {
   ])
 }
 
-function serverNotify(text, desp, timeout = 2100) {
+function serverNotify(text, desp, time = 2100) {
   return  new Promise(resolve => {
     if (SCKEY) {
       //微信server酱推送通知一个\n不会换行，需要两个\n才能换行，故做此替换
@@ -158,7 +181,8 @@ function serverNotify(text, desp, timeout = 2100) {
         body: `text=${text}&desp=${desp}`,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        },
+        timeout
       }
       setTimeout(() => {
         $.post(options, (err, resp, data) => {
@@ -170,7 +194,7 @@ function serverNotify(text, desp, timeout = 2100) {
               data = JSON.parse(data);
               //server酱和Server酱·Turbo版的返回json格式不太一样
               if (data.errno === 0 || data.data.errno === 0 ) {
-                console.log('server酱发送通知消息成功\n')
+                console.log('server酱发送通知消息成功🎉\n')
               } else if (data.errno === 1024) {
                 // 一分钟内发送相同的内容会触发
                 console.log(`server酱发送通知消息异常: ${data.errmsg}\n`)
@@ -184,9 +208,9 @@ function serverNotify(text, desp, timeout = 2100) {
             resolve(data);
           }
         })
-      }, timeout)
+      }, time)
     } else {
-      console.log('您未提供server酱的SCKEY，取消微信推送消息通知\n');
+      console.log('\n\n您未提供server酱的SCKEY，取消微信推送消息通知🚫\n');
       resolve()
     }
   })
@@ -244,7 +268,7 @@ function CoolPush(text, desp) {
           } else {
             data = JSON.parse(data);
             if (data.code === 200) {
-              console.log(`酷推发送${pushMode(QQ_MODE)}通知消息成功\n`)
+              console.log(`酷推发送${pushMode(QQ_MODE)}通知消息成功🎉\n`)
             } else if (data.code === 400) {
               console.log(`QQ酷推(Cool Push)发送${pushMode(QQ_MODE)}推送失败：${data.msg}\n`)
             } else if (data.code === 503) {
@@ -260,7 +284,7 @@ function CoolPush(text, desp) {
         }
       })
     } else {
-      console.log('您未提供酷推的SKEY，取消QQ推送消息通知\n');
+      console.log('您未提供酷推的SKEY，取消QQ推送消息通知🚫\n');
       resolve()
     }
   })
@@ -273,7 +297,8 @@ function BarkNotify(text, desp, params={}) {
         url: `${BARK_PUSH}/${encodeURIComponent(text)}/${encodeURIComponent(desp)}?sound=${BARK_SOUND}&${querystring.stringify(params)}`,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        },
+        timeout
       }
       $.get(options, (err, resp, data) => {
         try {
@@ -283,7 +308,7 @@ function BarkNotify(text, desp, params={}) {
           } else {
             data = JSON.parse(data);
             if (data.code === 200) {
-              console.log('Bark APP发送通知消息成功\n')
+              console.log('Bark APP发送通知消息成功🎉\n')
             } else {
               console.log(`${data.message}\n`);
             }
@@ -295,7 +320,7 @@ function BarkNotify(text, desp, params={}) {
         }
       })
     } else {
-      console.log('您未提供Bark的APP推送BARK_PUSH，取消Bark推送消息通知\n');
+      console.log('您未提供Bark的APP推送BARK_PUSH，取消Bark推送消息通知🚫\n');
       resolve()
     }
   })
@@ -309,15 +334,17 @@ function tgBotNotify(text, desp) {
         body: `chat_id=${TG_USER_ID}&text=${text}\n\n${desp}&disable_web_page_preview=true`,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        },
+        timeout
       }
-      if (process.env.TG_PROXY_HOST && process.env.TG_PROXY_PORT) {
+      if (TG_PROXY_HOST && TG_PROXY_PORT) {
         const tunnel = require("tunnel");
         const agent = {
           https: tunnel.httpsOverHttp({
             proxy: {
-              host: process.env.TG_PROXY_HOST,
-              port: process.env.TG_PROXY_PORT * 1
+              host: TG_PROXY_HOST,
+              port: TG_PROXY_PORT * 1,
+              proxyAuth: TG_PROXY_AUTH
             }
           })
         }
@@ -331,7 +358,7 @@ function tgBotNotify(text, desp) {
           } else {
             data = JSON.parse(data);
             if (data.ok) {
-              console.log('Telegram发送通知消息完成。\n')
+              console.log('Telegram发送通知消息成功🎉。\n')
             } else if (data.error_code === 400) {
               console.log('请主动给bot发送一条消息并检查接收用户ID是否正确。\n')
             } else if (data.error_code === 401){
@@ -345,7 +372,7 @@ function tgBotNotify(text, desp) {
         }
       })
     } else {
-      console.log('您未提供telegram机器人推送所需的TG_BOT_TOKEN和TG_USER_ID，取消telegram推送消息通知\n');
+      console.log('您未提供telegram机器人推送所需的TG_BOT_TOKEN和TG_USER_ID，取消telegram推送消息通知🚫\n');
       resolve()
     }
   })
@@ -362,7 +389,8 @@ function ddBotNotify(text, desp) {
       },
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      timeout
     }
     if (DD_BOT_TOKEN && DD_BOT_SECRET) {
       const crypto = require('crypto');
@@ -379,7 +407,7 @@ function ddBotNotify(text, desp) {
           } else {
             data = JSON.parse(data);
             if (data.errcode === 0) {
-              console.log('钉钉发送通知消息完成。\n')
+              console.log('钉钉发送通知消息成功🎉。\n')
             } else {
               console.log(`${data.errmsg}\n`)
             }
@@ -411,7 +439,7 @@ function ddBotNotify(text, desp) {
         }
       })
     } else {
-      console.log('您未提供钉钉机器人推送所需的DD_BOT_TOKEN或者DD_BOT_SECRET，取消钉钉推送消息通知\n');
+      console.log('您未提供钉钉机器人推送所需的DD_BOT_TOKEN或者DD_BOT_SECRET，取消钉钉推送消息通知🚫\n');
       resolve()
     }
   })
@@ -430,6 +458,7 @@ function qywxBotNotify(text, desp) {
       headers: {
         'Content-Type': 'application/json',
       },
+      timeout
     };
     if (QYWX_KEY) {
       $.post(options, (err, resp, data) => {
@@ -440,7 +469,7 @@ function qywxBotNotify(text, desp) {
           } else {
             data = JSON.parse(data);
             if (data.errcode === 0) {
-              console.log('企业微信发送通知消息完成。\n');
+              console.log('企业微信发送通知消息成功🎉。\n');
             } else {
               console.log(`${data.errmsg}\n`);
             }
@@ -452,7 +481,7 @@ function qywxBotNotify(text, desp) {
         }
       });
     } else {
-      console.log('您未提供企业微信机器人推送所需的QYWX_KEY，取消企业微信推送消息通知\n');
+      console.log('您未提供企业微信机器人推送所需的QYWX_KEY，取消企业微信推送消息通知🚫\n');
       resolve();
     }
   });
@@ -490,6 +519,7 @@ function qywxamNotify(text, desp) {
         headers: {
           'Content-Type': 'application/json',
         },
+        timeout
       };
       $.post(options_accesstoken, (err, resp, data) => {
         html = desp.replace(/\n/g, "<br/>")
@@ -566,7 +596,7 @@ function qywxamNotify(text, desp) {
             } else {
               data = JSON.parse(data);
               if (data.errcode === 0) {
-                console.log('成员ID:' + ChangeUserId(desp) + '企业微信应用消息发送通知消息完成。\n');
+                console.log('成员ID:' + ChangeUserId(desp) + '企业微信应用消息发送通知消息成功🎉。\n');
               } else {
                 console.log(`${data.errmsg}\n`);
               }
@@ -579,7 +609,7 @@ function qywxamNotify(text, desp) {
         });
       });
     } else {
-      console.log('您未提供企业微信应用消息推送所需的QYWX_AM，取消企业微信应用消息推送消息通知\n');
+      console.log('您未提供企业微信应用消息推送所需的QYWX_AM，取消企业微信应用消息推送消息通知🚫\n');
       resolve();
     }
   });
@@ -600,7 +630,8 @@ function iGotNotify(text, desp, params={}){
         body: `title=${text}&content=${desp}&${querystring.stringify(params)}`,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        },
+        timeout
       }
       $.post(options, (err, resp, data) => {
         try {
@@ -610,7 +641,7 @@ function iGotNotify(text, desp, params={}){
           } else {
             if(typeof data === 'string') data = JSON.parse(data);
             if (data.ret === 0) {
-              console.log('iGot发送通知消息成功\n')
+              console.log('iGot发送通知消息成功🎉\n')
             } else {
               console.log(`iGot发送通知消息失败：${data.errMsg}\n`)
             }
@@ -622,7 +653,7 @@ function iGotNotify(text, desp, params={}){
         }
       })
     } else {
-      console.log('您未提供iGot的推送IGOT_PUSH_KEY，取消iGot推送消息通知\n');
+      console.log('您未提供iGot的推送IGOT_PUSH_KEY，取消iGot推送消息通知🚫\n');
       resolve()
     }
   })
@@ -643,7 +674,8 @@ function pushPlusNotify(text, desp) {
         body: JSON.stringify(body),
         headers: {
           'Content-Type': ' application/json'
-        }
+        },
+        timeout
       }
       $.post(options, (err, resp, data) => {
         try {
@@ -665,7 +697,7 @@ function pushPlusNotify(text, desp) {
         }
       })
     } else {
-      console.log('您未提供push+推送所需的PUSH_PLUS_TOKEN，取消push+推送消息通知\n');
+      console.log('您未提供push+推送所需的PUSH_PLUS_TOKEN，取消push+推送消息通知🚫\n');
       resolve()
     }
   })
