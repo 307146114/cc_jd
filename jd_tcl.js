@@ -89,8 +89,7 @@ function showMsg() {
 }
 async function main() {
   await loadAct()
-  await helpFriend(shareUUID[Math.floor(Math.random() * 2)])
-  await sign()
+        
   await $.wait(1000)
   await getShopList()
   if (isPurchaseShops) await getGoodsList()
