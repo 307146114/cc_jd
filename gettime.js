@@ -28,4 +28,5 @@ console.log(Date.parse(new Date()));
 // 将指定时间转化成时间戳
 var newDate = new Date(sd.format(new Date(), 'YYYY-MM-DD HH:mm:ss'));
 console.log(newDate.getTime());
-console.log('JD_COOKIE'+process.env.JD_COOKIE)
+JD_COOKIE=process.env.JD_COOKIE;
+console.log('JD_COOKIE'+JD_COOKIE);
