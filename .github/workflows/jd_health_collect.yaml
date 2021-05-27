@@ -22,7 +22,7 @@ jobs:
                   node-version: "12.x"
             - name: Run app
               run: npm install
-            - run: node https://raw.githubusercontent.com/307146114/cc_jd/master/jd_health_collect.js
+            - run: node jd_health_collect.js
               env:
                   JD_COOKIE: ${{ github.event.client_payload.JD_COOKIE || secrets.JD_COOKIE }}
                   JD_DEBUG: ${{ github.event.client_payload.JD_DEBUG || secrets.JD_DEBUG }}
