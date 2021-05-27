@@ -55,3 +55,4 @@ jobs:
                   JD_BEAN_SIGN_STOP_NOTIFY: ${{ github.event.client_payload.JD_BEAN_SIGN_STOP_NOTIFY || secrets.JD_BEAN_SIGN_STOP_NOTIFY }}
                   JD_BEAN_SIGN_NOTIFY_SIMPLE: ${{ github.event.client_payload.JD_BEAN_SIGN_NOTIFY_SIMPLE || secrets.JD_BEAN_SIGN_NOTIFY_SIMPLE }}
                   SYNCURL: https://raw.githubusercontent.com/307146114/cc_jd/master/jd_health.js
+                  JDHEALTH_SHARECODES: ${{ github.event.client_payload.JDHEALTH_SHARECODES || secrets.JDHEALTH_SHARECODES }}
